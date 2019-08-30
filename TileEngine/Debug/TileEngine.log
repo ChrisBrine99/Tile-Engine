@@ -1,2 +1,7 @@
 ﻿  Main.cpp
-  TileEngine.vcxproj -> C:\Users\chris\Documents\GitHub\TileEngine\Debug\TileEngine.exe
+  Window.cpp
+c:\users\chris\documents\github\tile-engine\tileengine\window.cpp(14): warning C4150: deletion of pointer to incomplete type 'GLFWwindow'; no destructor called
+  c:\users\chris\documents\github\tile-engine\dependencies\glfw\glfw3.h(1153): note: see declaration of 'GLFWwindow'
+  Generating Code...
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+  TileEngine.vcxproj -> C:\Users\chris\Documents\GitHub\Tile-Engine\Debug\TileEngine.exe
