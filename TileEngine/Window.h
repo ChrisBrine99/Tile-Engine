@@ -10,20 +10,21 @@ namespace graphics {
 
 		const char *m_Name;
 		int m_Width, m_Height;
+		double m_TargetFPS;
 		bool m_Running;
 	public:
-		Window(const char *name, int width, int height);
-		~Window();
+		Window();															// Default Constructor
+		Window(const char *name, int width, int height, double TargetFPS);	// User-Defined Constructor
+		~Window();															// Default Deconstructor
 
-		void Run() const;
-		void Update();
-		void Draw();
+		void Run();				// The Main Program Loop
+		void HandleEvents();	// Handles All Program Events
+		void Update();			// Updates Object Physics
+		void Draw(float alpha); // Render Everything to the Screen
 
-		static void KeyEvent(GLFWwindow *window, int key, int scancode, int action, int mods);
-
-		bool isRunning();
+		static void KeyEvent(GLFWwindow *window, int key, int scancode, int action, int mods);	// Takes In Keyboard Input
 	private:
-		bool Init();
+		bool Init();	// Initializes the Game Window
 	};
 }
 
