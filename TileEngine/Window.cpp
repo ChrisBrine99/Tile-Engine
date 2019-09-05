@@ -1,5 +1,7 @@
 #include <iostream>
+#include <sstream>
 #include <chrono>
+
 #include "Window.h"
 
 namespace graphics {
@@ -7,88 +9,98 @@ namespace graphics {
 		m_Name = "Default Window";
 		m_Width = 640;
 		m_Height = 480;
-		m_TargetFPS = 60.0;
 		m_Running = Init();
 	}
 
-	Window::Window(const char *name, int width, int height, double targetFPS) { // Creates a unique window with user defined parameters
+	Window::Window(const char *name, int width, int height) { // Creates a unique window with user defined parameters
 		m_Name = name;
 		m_Width = width;
 		m_Height = height;
-		m_TargetFPS = targetFPS;
 		m_Running = Init();
 	}
 
-	Window::~Window() { // Default Destructor
-
+	Window::~Window() { // Default Deconstructor
+		glfwTerminate();
 	}
 
 	void Window::HandleEvents() { // Handles All Program Events
 		// Check all events
 		glfwPollEvents();
 
-		// Check if the Window should close at the end of the update
-		if (glfwWindowShouldClose(m_Window)) {
+		// Handle Keyboard Input
+		if (key[GLFW_KEY_ESCAPE]) {
 			glfwSetWindowShouldClose(m_Window, true);
+			std::cout << "PRESSED!" << std::endl;
+		}
+
+		// Check if the Window should close at the end of Handling Events
+		if (glfwWindowShouldClose(m_Window)) {
 			m_Running = false;
 		}
 	}
 
-	void Window::Update(){ // Update Events, Handle Input, and Update Physics
+	void Window::Update(double deltaTime){ // Update Events, Handle Input, and Update Physics
 		
 	}
 
-	void Window::Draw(float alpha) { // Render Everything to the Screen
-		int width, height;
-		glfwGetFramebufferSize(m_Window, &width, &height);
-		glViewport(0, 0, width, height);
-
-		glBegin(GL_QUADS);
-		glVertex2f(-0.5f, -0.5f);
-		glVertex2f(0.5f, -0.5f);
-		glVertex2f(0.5f, 0.5f);
-		glVertex2f(-0.5f, 0.5f);
-		glEnd();
-
-		glfwSwapBuffers(m_Window);
+	void Window::Draw() { // Render Everything to the Screen
+		glfwGetFramebufferSize(m_Window, &m_Width, &m_Height);
+		// Clearing the Screen
+		glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	}
 
-	void Window::KeyEvent(GLFWwindow *window, int key, int scancode, int action, int mods) { // Handle Keyboard Inputs
-		if (action == GLFW_PRESS) { // Handling Key Presses
-			if (key == GLFW_KEY_ESCAPE) {
-				glfwSetWindowShouldClose(window, GLFW_TRUE);
-			}
-		}
+		// Swap the currently displayed buffer
+		glfwSwapBuffers(m_Window);
 	}
 
 	void Window::Run() { // The Main Program Loop
-		using namespace std::chrono_literals;
-		using clock = std::chrono::high_resolution_clock;
-		using std::chrono::nanoseconds;
-		nanoseconds const timeStep(1ms);
-		nanoseconds lag(0ns);
-		auto startTime = clock::now();
-		// The Program Loop
+		double curTime = glfwGetTime();
+		double lastTime = glfwGetTime();
+		double deltaTime;
 		while (m_Running) {
-			auto deltaTime = clock::now() - startTime;
-			startTime = clock::now();
-			lag += std::chrono::duration_cast<nanoseconds>(deltaTime);
-			// Handle Program Events
-			HandleEvents();
-			// Update Physics
-			while (lag >= timeStep) {
-				lag -= timeStep;
-				Update();
-			}
-			// Draw to the Screen
-			auto alpha = (float)lag.count() / timeStep.count();
-			Draw(alpha);
+			curTime = glfwGetTime();
+			deltaTime = curTime - lastTime;
+
+			HandleEvents();		// Handle Program Events
+			Update(deltaTime);	// Update Physics
+			Draw();				// Render to Screen
+
+			lastTime = curTime;
+
+			// Display the Frame Rate on the Window's Title
+			std::ostringstream title;
+			title << m_Name << " (" << (int) (1.0f / deltaTime) << " FPS)";
+			glfwSetWindowTitle(m_Window, title.str().c_str());
 		}
 	}
 
-	bool Window::Init() { // Initalizes the Window
+	void Window::KeyEvent(GLFWwindow *window, int key_, int scancode, int action, int mods) { // Handle Keyboard Inputs
+		Window* window_ = (Window*) glfwGetWindowUserPointer(window);
+		if (action == GLFW_PRESS) { // Handling Key Presses
+			window_->key[key_] = true;
+		} else if (action == GLFW_RELEASE) { // Handling Key Releases
+			window_->key[key_] = false;
+		}
+	}
+
+	void Window::MouseEvent(GLFWwindow *window, int button_, int action, int mods) {
+		Window* window_ = (Window*)glfwGetWindowUserPointer(window);
+		if (action == GLFW_PRESS) { // Handling Mouse Presses
+			window_->button[button_] = true;
+		} else if (action == GLFW_RELEASE) { // Handling Mouse Releases
+			window_->button[button_] = false;
+		}
+	}
+
+	void Window::MouseMoved(GLFWwindow *window, double x, double y) {
+		Window* window_ = (Window*)glfwGetWindowUserPointer(window);
+		window_->mouseX = x;
+		window_->mouseY = y;
+	}
+
+	bool Window::Init() { // Initalizes the Window and GLEW Framework
 		if (!glfwInit()) { // Terminate the program if glfw cannot initialize
+			std::cout << "Could not initialize GLFW Libraries" << std::endl;
 			return false;
 		}
 		m_Window = glfwCreateWindow(m_Width, m_Height, m_Name, NULL, NULL);
@@ -97,7 +109,18 @@ namespace graphics {
 			return false;
 		}
 		glfwMakeContextCurrent(m_Window);
+		glfwSetWindowSizeLimits(m_Window, m_Width, m_Height, m_Width, m_Height);
+		glfwSetWindowUserPointer(m_Window, this);
+		// Setting up keyboard input, mouse input, and mouse motion tracking
 		glfwSetKeyCallback(m_Window, KeyEvent);
+		glfwSetMouseButtonCallback(m_Window, MouseEvent);
+		glfwSetCursorPosCallback(m_Window, MouseMoved);
+		if (glewInit() != GLEW_OK) {// Terminate the program if glew cannot initialize
+			std::cout << "Could not initialize GLEW Extension Libraries" << std::endl;
+			return false;
+		}
+		// Display some information about the current OpenGL version to the console
+		std::cout << "OpenGL Version " << glGetString(GL_VERSION) << std::endl;
 		return true;
 	}
 }
